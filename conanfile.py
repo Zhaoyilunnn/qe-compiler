@@ -11,7 +11,8 @@
 # that they have been altered from the originals.
 import os
 
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools
+from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 
 
 # Get version from environment variable.
@@ -39,6 +40,7 @@ class QSSCompilerConan(ConanFile):
     description = "An LLVM- and MLIR-based Quantum compiler that consumes OpenQASM 3.0"
     generators = ["CMakeToolchain", "CMakeDeps", "VirtualBuildEnv"]
     exports_sources = "*"
+    should_test = False
 
     def requirements(self):
         for req in self.conan_data["requirements"]:
@@ -59,17 +61,34 @@ class QSSCompilerConan(ConanFile):
             if any(req.startswith(tool + "/") for tool in tool_pkgs):
                 self.tool_requires(req)
 
-    def _configure_cmake(self):
-        cmake = CMake(self, generator="Ninja")
-        cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = "conan_toolchain.cmake"
-        cmake.definitions["CMAKE_EXPORT_COMPILE_COMMANDS"] = "ON"
-        cmake.definitions["QSSC_ENABLE_WARNINGS"] = "ON" if self.options.enable_warnings else "OFF"
-        # linking in parallel on all CPUs may take up more memory than
-        # available in a typical CI worker for debug builds.
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.generator = "Ninja"
+        tc.variables["CMAKE_EXPORT_COMPILE_COMMANDS"] = "ON"
+        tc.variables["QSSC_ENABLE_WARNINGS"] = "ON" if self.options.enable_warnings else "OFF"
+        tc.variables["QSSC_WITH_MOCK_TARGET"] = "OFF"
         if self.settings.build_type == "Debug":
-            cmake.definitions["LLVM_PARALLEL_LINK_JOBS"] = "2"
+            tc.variables["LLVM_PARALLEL_LINK_JOBS"] = "2"
+        tc.generate()
 
-        cmake.verbose = True
+        deps = CMakeDeps(self)
+        deps.generate()
+
+    def _configure_cmake(self):
+        # FIXME: These are commented out to be compatible with
+        # cmake = CMake(self, generator="Ninja")
+        # cmake.definitions["CMAKE_TOOLCHAIN_FILE"] = "conan_toolchain.cmake"
+        # cmake.definitions["CMAKE_EXPORT_COMPILE_COMMANDS"] = "ON"
+        # cmake.definitions["QSSC_ENABLE_WARNINGS"] = "ON" if self.options.enable_warnings else "OFF"
+        # # linking in parallel on all CPUs may take up more memory than
+        # # available in a typical CI worker for debug builds.
+        # if self.settings.build_type == "Debug":
+        #     cmake.definitions["LLVM_PARALLEL_LINK_JOBS"] = "2"
+
+        # cmake.verbose = True
+        # FIXME:
+
+        cmake = CMake(self)
         return cmake
 
     def build(self):

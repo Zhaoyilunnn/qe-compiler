@@ -354,7 +354,7 @@ include_directories(BEFORE SYSTEM ${nlohmann_json_INCLUDE_DIRS})
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(tools)
-add_subdirectory(python_lib)
+# add_subdirectory(python_lib)
 
 # Analysis ----------------------------------------------------------------------
 add_custom_target(check-analysis DEPENDS check-tidy check-format COMMENT "Running all analysis")
